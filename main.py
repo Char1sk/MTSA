@@ -34,6 +34,7 @@ def get_args():
 
     # transform define
     parser.add_argument('--transform', type=str, default='IdentityTransform')
+    parser.add_argument('--boxcox_lambda', type=float, default=1.0, help='hyper-parameter lambda in BoxCox')
 
     args = parser.parse_args()
     return args
