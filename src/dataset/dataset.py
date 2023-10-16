@@ -113,10 +113,27 @@ class CustomDataset(DatasetBase):
             self.data_cols: data columns(features/targets)
             self.data: np.ndarray, shape=(n_samples, timesteps, channels), where the last channel is the target
         '''
-        raise NotImplementedError
+        # No Need to Change. What's n_samples?
+        data = pd.read_csv(self.data_path)
+        cols = list(data.columns)
+        cols.remove(self.target)
+        cols.remove('date')
+        data = data[['date'] + cols + [self.target]]
+        self.data_stamp = pd.to_datetime(data.date)
+        self.data_cols = cols + [self.target]
+        self.data = np.expand_dims(data[self.data_cols].values, axis=0)
 
     def split_data(self):
-        raise NotImplementedError
+        # No Need to Change.
+        self.split = True
+        self.num_train = int(self.ratio_train * self.data.shape[1])
+        self.num_val = int(self.ratio_val * self.data.shape[1])
+        self.train_data = self.data[:, :self.num_train, :]
+        if self.num_val == 0:
+            self.val_data = None
+        else:
+            self.val_data = self.data[:, self.num_train: self.num_train + self.num_val, :]
+        self.test_data = self.data[:, self.num_train + self.num_val:, :]
 
 
 def get_dataset(args):
@@ -126,3 +143,33 @@ def get_dataset(args):
         'Custom': CustomDataset,
     }
     return dataset_dict[args.dataset](args)
+
+
+# Part 1.3. Testing
+if __name__ == '__main__':
+    
+    import argparse
+    from data_visualizer import data_visualize
+    # args
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--data_path', type=str, default='./dataset/exchange_rate/exchange_rate.csv')
+    parser.add_argument('--dataset', type=str, default='Custom', help='dataset type, options: [M4, ETT, Custom]')
+    parser.add_argument('--target', type=str, default='OT', help='target feature')
+    parser.add_argument('--ratio_train', type=int, default=0.7, help='train dataset length')
+    parser.add_argument('--ratio_val', type=int, default=0.2, help='validate dataset length')
+    parser.add_argument('--ratio_test', type=int, default=0.1, help='input sequence length')
+    args = parser.parse_args()
+    # dataset implement
+    dataset = get_dataset(args)
+    # read_data
+    print("Test read_data:")
+    print('\t', dataset.data_stamp.shape)
+    print('\t', len(dataset.data_cols))
+    print('\t', dataset.data.shape)
+    # split_data
+    print("Test split_data:")
+    print('\t', dataset.train_data.shape)
+    print('\t', dataset.val_data.shape)
+    print('\t', dataset.test_data.shape)
+    # data_visualize
+    data_visualize(dataset, t=30)
