@@ -7,16 +7,16 @@ def mse(predict, target):
 
 # TODO: implement the metrics
 def mae(predict, target):
-    raise NotImplementedError
+    return np.mean(np.abs(target-predict))
 
 
 def mape(predict, target):
-    raise NotImplementedError
+    return 100*np.mean(np.abs(target-predict)/np.abs(target))
 
 
 def smape(predict, target):
-    raise NotImplementedError
+    return 200*np.mean(np.abs(target-predict)/(np.abs(target)+np.abs(predict)))
 
 
-def mase(predict, target):
-    raise NotImplementedError
+def mase(predict, target, m):
+    return np.mean( np.abs(target-predict) / np.mean(np.abs(target[m:]-target[:-m])) )
