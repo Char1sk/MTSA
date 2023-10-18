@@ -18,5 +18,6 @@ def smape(predict, target):
     return 200*np.mean(np.abs(target-predict)/(np.abs(target)+np.abs(predict)))
 
 
-def mase(predict, target, m):
+def mase(predict, target):
+    m = 24
     return np.mean( np.abs(target-predict) / np.mean(np.abs(target[m:]-target[:-m])) )
