@@ -27,12 +27,13 @@ def data_visualize(dataset, t):
         plt.savefig(f'./pics/{channel}.jpg')
         plt.close()
     # for all channels(features), draw multiple lines in a pic
-    # WARNING: No way to show these lines together clearly, they are too far away
+    # WARNING: the ranges of features are different, so norm them to [0,1]
     # ax = brokenaxes(ylims=((0.1, 0.2), (0.7, 0.9), (1.5, 1.75)), despine=False)
     ax = brokenaxes(despine=False)
     for c in range(len(dataset.data_cols)):
         channel = dataset.data_cols[c]
         data_channel = data_show[:, c]
+        data_channel = (data_channel-data_channel.min()) / (data_channel.max()-data_channel.min())
         ax.plot(data_stamp, data_channel, label=channel)
     ax.legend()
     plt.savefig(f'./pics/all.jpg')

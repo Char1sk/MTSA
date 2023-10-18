@@ -31,7 +31,7 @@ class IdentityTransform(Transform):
     def inverse_transform(self, data):
         return data
 
-# TODO: add other transforms
+# add other transforms
 
 class NormalizationTransform(Transform):
     def __init__(self, args) -> None:
@@ -80,7 +80,7 @@ class MeanNormalizationTransform(Transform):
         data_t = data * (self.maxs-self.mins) + self.mean
         return data_t
 
-# TODO: -x
+
 class BoxCoxTransform(Transform):
     def __init__(self, args) -> None:
         self.lamda = args.boxcox_lambda
@@ -112,3 +112,24 @@ class BoxCoxTransform(Transform):
             data_t[self.pos_idx] = np.power(self.lamda*data_t[self.pos_idx]+1, 1/self.lamda) - 1
             data_t[self.neg_idx] = -np.power((self.lamda-2)*data_t[self.neg_idx]+1, 1/(2-self.lamda)) + 1
         return data_t
+
+
+if __name__ == '__main__':
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--boxcox_lambda', type=float, default=0.0, help='hyper-parameter lambda in BoxCox')
+    args = parser.parse_args()
+    
+    x = (np.random.random((1, 10, 8))-0.5)/0.5
+    norms = [
+        NormalizationTransform(args),
+        StandardizationTransform(args),
+        MeanNormalizationTransform(args),
+        BoxCoxTransform(args)
+    ]
+    
+    for norm in norms:
+        x_t = norm.transform(x)
+        x_tt = norm.inverse_transform(x_t)
+        print(np.all(np.abs(x-x_tt)<1e-5))
+    
