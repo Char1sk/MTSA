@@ -11,7 +11,12 @@ def mae(predict, target):
 
 
 def mape(predict, target):
-    return 100*np.mean(np.abs(target-predict)/np.abs(target))
+    # # Avoid target==0 & divide by zero
+    # print(target.shape, np.argwhere(target==0).shape)
+    # print(target.nonzero())
+    predict_nonzero = predict[target!=0]
+    target_nonzero = target[target!=0]
+    return 100*np.mean(np.abs(target_nonzero-predict_nonzero)/np.abs(target_nonzero))
 
 
 def smape(predict, target):
