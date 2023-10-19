@@ -20,7 +20,12 @@ def mape(predict, target):
 
 
 def smape(predict, target):
-    return 200*np.mean(np.abs(target-predict)/(np.abs(target)+np.abs(predict)))
+    # print(np.any(np.isnan(np.abs(target-predict))), np.any(np.isnan(np.abs(target)+np.abs(predict))), np.any(np.isnan(np.abs(target-predict)/(np.abs(target)+np.abs(predict)))))
+    predict_nonzero = predict.copy()
+    predict_nonzero[predict==0] += 1e-6
+    target_nonzero = target.copy()
+    target_nonzero[target==0] += 1e-6
+    return 200*np.mean(np.abs(target_nonzero-predict_nonzero)/(np.abs(target_nonzero)+np.abs(predict_nonzero)))
 
 
 def mase(predict, target):

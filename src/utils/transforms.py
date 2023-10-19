@@ -38,9 +38,9 @@ class NormalizationTransform(Transform):
         pass
     
     def transform(self, data):
-        # data: np.ndarray, shape=(n_samples, timesteps, channels)
-        self.mins = data.min(axis=1)
-        self.maxs = data.max(axis=1)
+        # data: np.ndarray, shape=(n_samples, timesteps, channels) or (windows, channels)
+        self.mins = data.min()
+        self.maxs = data.max()
         data_t = (data-self.mins) / (self.maxs-self.mins)
         return data_t
     
@@ -54,9 +54,9 @@ class StandardizationTransform(Transform):
         pass
 
     def transform(self, data):
-        # data: np.ndarray, shape=(n_samples, timesteps, channels)
-        self.mean = data.mean(axis=1)
-        self.std = data.std(axis=1)
+        # data: np.ndarray, shape=(n_samples, timesteps, channels) or (windows, channels)
+        self.mean = data.mean()
+        self.std = data.std()
         data_t = (data-self.mean) / self.std
         return data_t
 
@@ -70,9 +70,9 @@ class MeanNormalizationTransform(Transform):
         pass
 
     def transform(self, data):
-        self.mean = data.mean(axis=1)
-        self.mins = data.min(axis=1)
-        self.maxs = data.max(axis=1)
+        self.mean = data.mean()
+        self.mins = data.min()
+        self.maxs = data.max()
         data_t = (data-self.mean) / (self.maxs-self.mins)
         return data_t
 
@@ -83,34 +83,37 @@ class MeanNormalizationTransform(Transform):
 
 class BoxCoxTransform(Transform):
     def __init__(self, args) -> None:
+        # This transform doesnt change SIGNs
         self.lamda = args.boxcox_lambda
 
     def transform(self, data):
-        self.pos_idx = data>=0
-        self.neg_idx = np.invert(self.pos_idx)
+        pos_idx = data>=0
+        neg_idx = np.invert(pos_idx)
         data_t = data.copy()
         if self.lamda == 0:
-            data_t[self.pos_idx] = np.log(data_t[self.pos_idx]+1)
-            data_t[self.neg_idx] = -(np.power(-data_t[self.neg_idx]+1, 2-self.lamda)-1) / (2-self.lamda)
+            data_t[pos_idx] = np.log(data_t[pos_idx]+1)
+            data_t[neg_idx] = -(np.power(-data_t[neg_idx]+1, 2-self.lamda)-1) / (2-self.lamda)
         elif self.lamda == 2:
-            data_t[self.pos_idx] = (np.power(data_t[self.pos_idx]+1, self.lamda)-1) / self.lamda
-            data_t[self.neg_idx] = -np.log(-data_t[self.neg_idx]+1)
+            data_t[pos_idx] = (np.power(data_t[pos_idx]+1, self.lamda)-1) / self.lamda
+            data_t[neg_idx] = -np.log(-data_t[neg_idx]+1)
         else:
-            data_t[self.pos_idx] = (np.power(data_t[self.pos_idx]+1, self.lamda)-1) / self.lamda
-            data_t[self.neg_idx] = -(np.power(-data_t[self.neg_idx]+1, 2-self.lamda)-1) / (2-self.lamda)
+            data_t[pos_idx] = (np.power(data_t[pos_idx]+1, self.lamda)-1) / self.lamda
+            data_t[neg_idx] = -(np.power(-data_t[neg_idx]+1, 2-self.lamda)-1) / (2-self.lamda)
         return data_t
 
     def inverse_transform(self, data):
+        pos_idx = data>=0
+        neg_idx = np.invert(pos_idx)
         data_t = data.copy()
         if self.lamda == 0:
-            data_t[self.pos_idx] = np.exp(data_t[self.pos_idx])-1
-            data_t[self.neg_idx] = -np.power((self.lamda-2)*data_t[self.neg_idx]+1, 1/(2-self.lamda)) + 1
+            data_t[pos_idx] = np.exp(data_t[pos_idx])-1
+            data_t[neg_idx] = -np.power((self.lamda-2)*data_t[neg_idx]+1, 1/(2-self.lamda)) + 1
         elif self.lamda == 2:
-            data_t[self.pos_idx] = np.power(self.lamda*data_t[self.pos_idx]+1, 1/self.lamda) - 1
-            data_t[self.neg_idx] = -np.exp(-data_t[self.neg_idx])+1
+            data_t[pos_idx] = np.power(self.lamda*data_t[pos_idx]+1, 1/self.lamda) - 1
+            data_t[neg_idx] = -np.exp(-data_t[neg_idx])+1
         else:
-            data_t[self.pos_idx] = np.power(self.lamda*data_t[self.pos_idx]+1, 1/self.lamda) - 1
-            data_t[self.neg_idx] = -np.power((self.lamda-2)*data_t[self.neg_idx]+1, 1/(2-self.lamda)) + 1
+            data_t[pos_idx] = np.power(self.lamda*data_t[pos_idx]+1, 1/self.lamda) - 1
+            data_t[neg_idx] = -np.power((self.lamda-2)*data_t[neg_idx]+1, 1/(2-self.lamda)) + 1
         return data_t
 
 
