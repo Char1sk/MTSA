@@ -1,6 +1,6 @@
 from src.models.TsfKNN import TsfKNN
-from src.models.baselines import ZeroForecast, MeanForecast
-from src.utils.transforms import IdentityTransform
+from src.models.baselines import ZeroForecast, MeanForecast, LinearRegression, ExponantielSmoothing
+from src.utils.transforms import IdentityTransform, NormalizationTransform, StandardizationTransform, MeanNormalizationTransform, BoxCoxTransform
 from trainer import MLTrainer
 from src.dataset.dataset import get_dataset
 import argparse
@@ -12,7 +12,8 @@ def get_args():
     parser = argparse.ArgumentParser()
 
     # dataset config
-    parser.add_argument('--data_path', type=str, default='./dataset/ETT/ETTh1.csv')
+    # parser.add_argument('--data_path', type=str, default='./dataset/ETT/ETTh1.csv')
+    parser.add_argument('--data_path', type=str, default='./dataset/ETT-small/ETTh1.csv')
     parser.add_argument('--train_data_path', type=str, default='./dataset/m4/Daily-train.csv')
     parser.add_argument('--test_data_path', type=str, default='./dataset/m4/Daily-test.csv')
     parser.add_argument('--dataset', type=str, default='ETT', help='dataset type, options: [M4, ETT, Custom]')
@@ -24,6 +25,7 @@ def get_args():
     # forcast task config
     parser.add_argument('--seq_len', type=int, default=96, help='input sequence length')
     parser.add_argument('--pred_len', type=int, default=32, help='prediction sequence length')
+    parser.add_argument('--es_lambda', type=float, default=0.2, help='hyper-parameter lambda in ES')
 
     # model define
     parser.add_argument('--model', type=str, required=True, default='MeanForecast', help='model name')
@@ -44,6 +46,8 @@ def get_model(args):
     model_dict = {
         'ZeroForecast': ZeroForecast,
         'MeanForecast': MeanForecast,
+        'LinearRegression': LinearRegression,
+        'ExponantielSmoothing': ExponantielSmoothing,
         'TsfKNN': TsfKNN,
     }
     return model_dict[args.model](args)
@@ -52,11 +56,15 @@ def get_model(args):
 def get_transform(args):
     transform_dict = {
         'IdentityTransform': IdentityTransform,
+        'NormalizationTransform': NormalizationTransform,
+        'StandardizationTransform': StandardizationTransform,
+        'MeanNormalizationTransform': MeanNormalizationTransform,
+        'BoxCoxTransform': BoxCoxTransform
     }
     return transform_dict[args.transform](args)
 
 
-if __name__ == '__main__':
+def main():
     fix_seed = 2023
     random.seed(fix_seed)
     np.random.seed(fix_seed)
@@ -74,3 +82,7 @@ if __name__ == '__main__':
     trainer.train()
     # evaluate model
     trainer.evaluate(dataset, seq_len=args.seq_len, pred_len=args.pred_len)
+
+
+if __name__ == '__main__':
+    main()
