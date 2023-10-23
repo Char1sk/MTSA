@@ -5,6 +5,7 @@ from trainer import MLTrainer
 from src.dataset.dataset import get_dataset
 import argparse
 import random
+import time
 import numpy as np
 
 
@@ -35,7 +36,8 @@ def get_args():
 
     # dataset config
     # parser.add_argument('--data_path', type=str, default='./dataset/ETT/ETTh1.csv')
-    parser.add_argument('--data_path', type=str, default='./dataset/ETT-small/ETTh1.csv')
+    # parser.add_argument('--data_path', type=str, default='./dataset/ETT-small/ETTh1.csv')
+    parser.add_argument('--data_path', type=str, default='./dataset/illness/national_illness.csv')
     parser.add_argument('--train_data_path', type=str, default='./dataset/m4/Daily-train.csv')
     parser.add_argument('--test_data_path', type=str, default='./dataset/m4/Daily-test.csv')
     parser.add_argument('--dataset', type=str, default='ETT', help='dataset type, options: [M4, ETT, Custom]')
@@ -56,6 +58,11 @@ def get_args():
     parser.add_argument('--distance', type=str, default='euclidean', help='distance used in TsfKNN')
     parser.add_argument('--msas', type=str, default='MIMO', help='multi-step ahead strategy used in TsfKNN, options: '
                                                                  '[MIMO, recursive]')
+    # KNN approximate LSH
+    parser.add_argument('--approx', type=str, default=None, help='approximate KNN methods, options: [None, "LSH"]')
+    parser.add_argument('--hash_size', type=int, default=8, help='number of digits after hash in LSH')
+    parser.add_argument('--num_hashes', type=int, default=1, help='number of hash tables in LSH')
+    
 
     # transform define
     parser.add_argument('--transform', type=str, default='IdentityTransform')
@@ -86,10 +93,16 @@ def main():
     transform = get_transform(args)
     # create trainer
     trainer = MLTrainer(model=model, transform=transform, dataset=dataset)
+    
+    time1 = time.time()
     # train model
     trainer.train()
     # evaluate model
     trainer.evaluate(dataset, seq_len=args.seq_len, pred_len=args.pred_len)
+    time2 = time.time()
+    print(f"time: {time2-time1}")
+    
+    
 
 
 def test():
@@ -136,5 +149,5 @@ def test():
 
 
 if __name__ == '__main__':
-    # main()
-    test()
+    main()
+    # test()
