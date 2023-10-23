@@ -31,6 +31,11 @@ class TsfKNN(MLForecastModel):
             # lsh = LSH(self.args)
             # lsh.index(X_s, seq_len)
             neighbor_fore = self.lsh.query(x, X_s, self.k, self.distance)
+            # Use tranditional KNN for empty candidates
+            if neighbor_fore.shape[0] == 0:
+                distances = self.distance(x, X_s[:, :seq_len])
+                indices_of_smallest_k = np.argsort(distances)[:self.k]
+                neighbor_fore = X_s[indices_of_smallest_k, :]
             neighbor_fore = neighbor_fore[:, seq_len:]
             # neighbor_fore = np.concatenate([X[:,seq_len:] for X in neighbor_fore])
             x_fore = np.mean(neighbor_fore, axis=0, keepdims=True)
@@ -122,10 +127,10 @@ class LSH():
         candidate_idx = list(candidate_set)
         candidate_dist = distance(input, inputs[candidate_idx, :seq_len])
         candidate_idx_arg = candidate_dist.argsort()
-        candidate_idx_sort = np.array(candidate_idx)[candidate_idx_arg]
-        if candidate_idx_sort.size == 0: ##############
-            print('Warn: Empty candidates')
-            candidate_idx_sort = [0]
+        candidate_idx_sort = np.array(candidate_idx, dtype=int)[candidate_idx_arg]
+        # if candidate_idx_sort.size == 0: ##############
+        #     print('Warn: Empty candidates')
+        #     candidate_idx_sort = [0]
         candidate_list = inputs[candidate_idx_sort]
         # print(f'candidates: {len(candidate_list)}')
         return candidate_list[:k, :]

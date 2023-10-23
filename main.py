@@ -62,7 +62,6 @@ def get_args():
     parser.add_argument('--approx', type=str, default=None, help='approximate KNN methods, options: [None, "LSH"]')
     parser.add_argument('--hash_size', type=int, default=8, help='number of digits after hash in LSH')
     parser.add_argument('--num_hashes', type=int, default=1, help='number of hash tables in LSH')
-    
 
     # transform define
     parser.add_argument('--transform', type=str, default='IdentityTransform')
