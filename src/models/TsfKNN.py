@@ -23,7 +23,6 @@ class TsfKNN(MLForecastModel):
         if self.approx == 'LSH':
             X_s = sliding_window_view(self.X, self.seq_len + self.pred_len)
             self.lsh.index(X_s, self.seq_len)
-            
 
     def _search(self, x, X_s, seq_len, pred_len):
         # x: ndaaray (1, seq_len)
@@ -73,14 +72,16 @@ class LSH():
         self.input_dim  = args.seq_len
         self.num_hashes = args.num_hashes
         
-        self.hash_tables = [{} for _ in range(self.num_hashes)]
+        # self.hash_tables = [{} for _ in range(self.num_hashes)]
+        self.BIN2DEC = np.array([2**i for i in range(self.hash_size)])
+        self.hash_tables = np.ndarray((self.num_hashes, 2**self.hash_size), np.object_)
         self.uniform_vals = [np.random.randn(self.hash_size, self.input_dim) for _ in range(self.num_hashes)]
     
     def hash(self, input, uni_val):
         # input: ndarray (1, seq_len)
-        sim = uni_val @ input.T > 0
-        idx = ''.join([str(i) for i in sim.squeeze(1).tolist()])
-        return idx
+        sim = input @ uni_val.T > 0
+        # idx = ''.join([str(i) for i in sim.squeeze(1).tolist()])
+        return sim
     
     def hash_all(self, inputs, uni_val):
         # inputs: ndarray (windows, seq_len)
@@ -97,9 +98,12 @@ class LSH():
         for (i, uni_val) in enumerate(self.uniform_vals):
             sims = self.hash_all(inputs[:, :seq_len], uni_val)
             for (j, sim) in enumerate(sims):
-                idx = ''.join([str(s) for s in sim.tolist()])
+                # idx = ''.join([str(s) for s in sim.tolist()])
                 # self.hash_tables[i].setdefault(idx, []).append(tuple(inputs[j,:].tolist()))
-                self.hash_tables[i].setdefault(idx, []).append(j)
+                # self.hash_tables[i].setdefault(idx, []).append(j)
+                idx = sim @ self.BIN2DEC
+                lst = self.hash_tables[i][idx]
+                self.hash_tables[i][idx] = (lst if lst else []) + [j]
     
     def query(self, input, inputs, k, distance):
         # input: ndarray (1, seq_len)
@@ -107,7 +111,9 @@ class LSH():
         candidate_set = set()
         # if matches any hash-value, means neighbors
         for (i, uni_val) in enumerate(self.uniform_vals):
-            neighbors = self.hash_tables[i].get(self.hash(input, uni_val), [])
+            # neighbors = self.hash_tables[i].get(self.hash(input, uni_val), [])
+            idx = self.hash(input, uni_val).squeeze(0) @ self.BIN2DEC
+            neighbors = self.hash_tables[i][idx] if self.hash_tables[i][idx] else []
             candidate_set.update(tuple(neighbors))
         # choose smallest k
         # candidate_list = [(np.array([can]), distance(input,np.array([can])[:,:seq_len])) for can in candidate_set]
@@ -117,7 +123,8 @@ class LSH():
         candidate_dist = distance(input, inputs[candidate_idx, :seq_len])
         candidate_idx_arg = candidate_dist.argsort()
         candidate_idx_sort = np.array(candidate_idx)[candidate_idx_arg]
-        if candidate_idx_sort.size == 0:
+        if candidate_idx_sort.size == 0: ##############
+            print('Warn: Empty candidates')
             candidate_idx_sort = [0]
         candidate_list = inputs[candidate_idx_sort]
         # print(f'candidates: {len(candidate_list)}')
