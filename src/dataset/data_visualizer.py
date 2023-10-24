@@ -18,11 +18,17 @@ def data_visualize(dataset, t):
     ridx = np.random.randint(0, dataset.data_stamp.size-t)
     data_show = data[ridx:ridx+t, :]
     data_stamp = dataset.data_stamp[ridx:ridx+t]
-    # for every channels(features), draw a line, save a pic
-    for c in range(len(dataset.data_cols)):
+    # for every channels(features), draw 2 lines, save a pic
+    for c in range(len(dataset.data_cols)-1):
         channel = dataset.data_cols[c]
         data_channel = data_show[:, c]
-        plt.plot(data_stamp, data_channel, label=channel)
+        data_target = data_show[:, -1]
+        plt.plot(data_stamp, data_channel, 'b-', label=channel)
+        plt.ylabel(channel)
+        plt.legend()
+        plt.twinx()
+        plt.plot(data_stamp, data_target, 'r-', label='target')
+        plt.ylabel('target')
         plt.legend()
         plt.savefig(f'./pics/{channel}.jpg')
         plt.close()
