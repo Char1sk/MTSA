@@ -59,7 +59,7 @@ class LinearRegression(MLForecastModel):
         return X @ self.w
 
 
-class ExponantielSmoothing(MLForecastModel):
+class ExponantialSmoothing(MLForecastModel):
     def __init__(self, args) -> None:
         super().__init__()
         self.lamda = args.es_lambda
@@ -82,7 +82,7 @@ if __name__ == '__main__':
     parser.add_argument('--es_lambda', type=float, default=0.2, help='hyper-parameter lambda in ES')
     args = parser.parse_args()
     # es test
-    es = ExponantielSmoothing(args)
+    es = ExponantialSmoothing(args)
     X = np.random.random((10, 5))
     y = es._forecast(X, 3)
     print(X)
