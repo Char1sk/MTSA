@@ -84,13 +84,14 @@ class LSH():
     
     def hash(self, input, uni_val):
         # input: ndarray (1, seq_len)
-        sim = input @ uni_val.T > 0
+        sim = (input-self.means) @ uni_val.T > 0
         # idx = ''.join([str(i) for i in sim.squeeze(1).tolist()])
         return sim
     
     def hash_all(self, inputs, uni_val):
         # inputs: ndarray (windows, seq_len)
-        sims = inputs @ uni_val.T > 0
+        self.means = inputs.mean(axis=0)
+        sims = (inputs-self.means) @ uni_val.T > 0
         return sims
     
     def index(self, inputs, seq_len):
