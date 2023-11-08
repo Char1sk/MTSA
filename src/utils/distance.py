@@ -1,21 +1,29 @@
 import numpy as np
 
 
+def reshaping(a):
+    if a.ndim == 2:
+        a = np.expand_dims(a, axis=0)
+    return a.reshape(a.shape[0],-1)
+
+
 def euclidean(A, B):
-    return np.sqrt(np.sum(np.sum((A - B) ** 2, axis=1), axis=1))
+    return np.linalg.norm(reshaping(B)-reshaping(A), axis=1)
+    # return np.sqrt(np.sum(np.sum((A - B) ** 2, axis=1), axis=1))
 
 
 def manhattan(A, B):
-    return np.linalg.norm(B-A, ord=1, axis=1)
+    return np.linalg.norm(reshaping(B)-reshaping(A), ord=1, axis=1)
 
 
 def chebyshev(A, B):
-    return np.linalg.norm(B-A, ord=np.inf, axis=1)
+    return np.linalg.norm(reshaping(B)-reshaping(A), ord=np.inf, axis=1)
 
 
-# A(1, seq_len) B(windows, seq_len)
+# A(seq_len [,n_features]) B(windows, seq_len [,n_features])
 # return: (windows,)
 def cosine(A, B):
+    A, B = reshaping(A), reshaping(B)
     dots = (A@B.T).squeeze(0)
     normA = np.linalg.norm(A, axis=1)
     normB = np.linalg.norm(B, axis=1)
@@ -23,6 +31,7 @@ def cosine(A, B):
 
 
 def dtw(A, B):
+    A, B = reshaping(A), reshaping(B)
     l = A.shape[1]
     w = B.shape[0]
     ret = np.zeros((w, l+1,l+1))

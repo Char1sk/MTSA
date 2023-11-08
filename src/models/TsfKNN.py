@@ -25,8 +25,8 @@ class TsfKNN(MLForecastModel):
             self.lsh.index(X_s, self.seq_len)
 
     def _search(self, x, X_s, seq_len, pred_len):
-        # x: ndaaray (1, seq_len)
-        # X_s: ndarray (windows, seq_len+pred_len)
+        # x: ndaaray (1, seq_len [, n_features])
+        # X_s: ndarray (windows, seq_len+pred_len [, n_features])
         if self.approx == 'LSH':
             # lsh = LSH(self.args)
             # lsh.index(X_s, seq_len)
@@ -59,7 +59,7 @@ class TsfKNN(MLForecastModel):
                     return np.concatenate((x_fore, self._search(x_new, X_s, seq_len, pred_len - 1)), axis=1)
 
     def _forecast(self, X: np.ndarray, pred_len) -> np.ndarray:
-        # X: ndarray (windows, seq_len)
+        # X: ndarray (windows, seq_len [, n_features])
         fore = []
         bs, seq_len, channels = X.shape
         X_s = sliding_window_view(self.X, (seq_len + pred_len, channels)).reshape(-1, seq_len + pred_len, channels)
