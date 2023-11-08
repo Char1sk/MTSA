@@ -55,8 +55,8 @@ class StandardizationTransform(Transform):
 
     def transform(self, data):
         # data: np.ndarray, shape=(n_samples, timesteps, channels) or (windows, channels)
-        self.mean = data.mean()
-        self.std = data.std()
+        self.mean = data.reshape((-1, data.shape[-1])).mean(axis=1)
+        self.std = data.reshape((-1, data.shape[-1])).std(axis=1)
         data_t = (data-self.mean) / self.std
         return data_t
 
