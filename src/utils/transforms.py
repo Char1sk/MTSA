@@ -39,8 +39,8 @@ class NormalizationTransform(Transform):
     
     def transform(self, data):
         # data: np.ndarray, shape=(n_samples, timesteps, channels) or (windows, channels)
-        self.mins = data.min()
-        self.maxs = data.max()
+        self.mins = data.min(axis=-2, keepdims=True)
+        self.maxs = data.max(axis=-2, keepdims=True)
         data_t = (data-self.mins) / (self.maxs-self.mins)
         return data_t
     
@@ -55,8 +55,8 @@ class StandardizationTransform(Transform):
 
     def transform(self, data):
         # data: np.ndarray, shape=(n_samples, timesteps, channels) or (windows, channels)
-        self.mean = data.reshape((-1, data.shape[-1])).mean(axis=1)
-        self.std = data.reshape((-1, data.shape[-1])).std(axis=1)
+        self.mean = data.reshape((-1, data.shape[-1])).mean(axis=-2, keepdims=True)
+        self.std = data.reshape((-1, data.shape[-1])).std(axis=-2, keepdims=True)
         data_t = (data-self.mean) / self.std
         return data_t
 
