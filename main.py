@@ -1,4 +1,5 @@
 from src.models.TsfKNN import TsfKNN
+from src.models.DLinear import DLinear
 from src.models.baselines import ZeroForecast, MeanForecast, LinearRegression, ExponantialSmoothing
 from src.utils.transforms import IdentityTransform, NormalizationTransform, StandardizationTransform, MeanNormalizationTransform, BoxCoxTransform
 from trainer import MLTrainer
@@ -16,6 +17,7 @@ def get_model(args):
         'LinearRegression': LinearRegression,
         'ExponantielSmoothing': ExponantialSmoothing,
         'TsfKNN': TsfKNN,
+        'DLinear': DLinear
     }
     return model_dict[args.model](args)
 
@@ -59,6 +61,7 @@ def get_args():
     parser.add_argument('--distance', type=str, default='euclidean', help='distance used in TsfKNN')
     parser.add_argument('--msas', type=str, default='MIMO', help='multi-step ahead strategy used in TsfKNN, options: '
                                                                  '[MIMO, recursive]')
+    parser.add_argument('--individual', action='store_true', help='use individual weights for Linear & DLinear')
     # KNN approximate LSH
     parser.add_argument('--approx', type=str, default=None, help='approximate KNN methods, options: [None, "LSH"]')
     parser.add_argument('--hash_size', type=int, default=8, help='number of digits after hash in LSH')
