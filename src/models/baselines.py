@@ -77,13 +77,13 @@ class LinearRegression(MLForecastModel):
             self.ws = np.zeros((wins.shape[2], self.seq_len, self.pred_len))
             for i in range(wins.shape[2]):
                 xi, yi = x[:, :, i], y[:, :, i]
-                self.ws[i, :, :] = np.linalg.inv(xi.T @ xi) @ xi.T @ yi
+                self.ws[i, :, :] = np.linalg.pinv(xi.T @ xi) @ xi.T @ yi
         else:
             # x: ndarray, (windows_train * features, seq_len)
             # to minimize compound loss of all features, view features as samples
             x = wins[:, :self.seq_len, :].transpose(0,2,1).reshape(-1, self.seq_len)
             y = wins[:, self.seq_len:, :].transpose(0,2,1).reshape(-1, self.pred_len)
-            self.w = np.linalg.inv(x.T @ x) @ x.T @ y
+            self.w = np.linalg.pinv(x.T @ x) @ x.T @ y
         self.fitted = True
     
     def _forecast(self, X: np.ndarray, pred_len) -> np.ndarray:
