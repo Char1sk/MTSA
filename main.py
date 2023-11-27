@@ -35,7 +35,7 @@ def get_transform(args):
 
 def get_args():
     parser = argparse.ArgumentParser()
-
+    
     # dataset config
     # parser.add_argument('--data_path', type=str, default='./dataset/ETT/ETTh1.csv')
     # parser.add_argument('--data_path', type=str, default='./dataset/ETT-small/ETTh1.csv')
@@ -48,12 +48,12 @@ def get_args():
     parser.add_argument('--ratio_val', type=int, default=0, help='validate dataset length')
     parser.add_argument('--ratio_test', type=int, default=0.3, help='input sequence length')
     parser.add_argument('--frequency', type=str, default='h', help='frequency of time series data, options: [h, m]')
-
+    
     # forcast task config
     parser.add_argument('--seq_len', type=int, default=96, help='input sequence length')
     parser.add_argument('--pred_len', type=int, default=32, help='prediction sequence length')
     parser.add_argument('--es_lambda', type=float, default=0.2, help='hyper-parameter lambda in ES')
-
+    
     # model define
     # parser.add_argument('--model', type=str, required=True, default='MeanForecast', help='model name')
     parser.add_argument('--model', type=str, default='MeanForecast', help='model name')
@@ -66,14 +66,17 @@ def get_args():
     parser.add_argument('--approx', type=str, default=None, help='approximate KNN methods, options: [None, "LSH"]')
     parser.add_argument('--hash_size', type=int, default=8, help='number of digits after hash in LSH')
     parser.add_argument('--num_hashes', type=int, default=1, help='number of hash tables in LSH')
-
+    # KNN lag-based
+    parser.add_argument('--knn_tau', type=int, default=1, help='stride of lag-based embedding')
+    parser.add_argument('--knn_m', type=int, default=0, help='dim of embedding, no greater than seq_len; 0 means all')
+    
     # transform define
     parser.add_argument('--transform', type=str, default='IdentityTransform')
     parser.add_argument('--boxcox_lambda', type=float, default=2.0, help='hyper-parameter lambda in BoxCox')
-
+    
     # job
     parser.add_argument('--job', type=str, default='main', help='select in ["main", "test", "knn_test"]')
-
+    
     args = parser.parse_args()
     return args
 

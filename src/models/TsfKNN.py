@@ -11,6 +11,8 @@ class TsfKNN(MLForecastModel):
         self.distance = get_distance(args.distance)
         self.msas = args.msas
         
+        self.tau = args.knn_tau
+        self.m = args.knn_m
         self.approx = args.approx
         self.seq_len = args.seq_len
         self.pred_len = args.pred_len
@@ -63,12 +65,19 @@ class TsfKNN(MLForecastModel):
         fore = []
         bs, seq_len, channels = X.shape
         X_s = sliding_window_view(self.X, (seq_len + pred_len, channels)).reshape(-1, seq_len + pred_len, channels)
+        X_s = np.concatenate((self._lag_embed(X_s[:,:self.seq_len]), X_s[:,self.seq_len:]),axis=1)
         for i in range(X.shape[0]):
-            x = X[i, :, :]
-            x_fore = self._search(x, X_s, seq_len, pred_len)
+            x = self._lag_embed(X[i:i+1, :, :])
+            x_fore = self._search(x, X_s, x.shape[1], pred_len)
             fore.append(x_fore)
         fore = np.concatenate(fore, axis=0)
         return fore
+    
+    def _lag_embed(self, X):
+        idx = np.arange(0, self.seq_len, self.tau)
+        if self.m > 0:
+            idx = idx[:self.m]
+        return X[:,idx]
 
 
 class LSH():
