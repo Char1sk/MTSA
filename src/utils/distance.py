@@ -2,7 +2,7 @@ import numpy as np
 
 
 def reshaping(a):
-    if a.ndim == 2:
+    if a.ndim <= 2:
         a = np.expand_dims(a, axis=0)
     return a.reshape(a.shape[0],-1)
 

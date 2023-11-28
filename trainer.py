@@ -27,8 +27,10 @@ class MLTrainer:
         te_X = self.transform.transform(test_X)
         fore = self.model.forecast(te_X, pred_len=pred_len)
         fore = self.transform.inverse_transform(fore)
-        print('mse:', mse(fore, test_Y))
-        print('mae:', mae(fore, test_Y))
+        r_mse, r_mae = mse(fore, test_Y), mae(fore, test_Y)
+        print('mse:', r_mse)
+        print('mae:', r_mae)
+        return r_mse, r_mae
         # print('mape:', mape(fore, test_Y))
         # print('smape:', smape(fore, test_Y))
         # print('mase:', mase(fore, test_Y))
