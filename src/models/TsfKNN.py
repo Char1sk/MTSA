@@ -3,6 +3,7 @@ from numpy.lib.stride_tricks import sliding_window_view
 
 from src.models.base import MLForecastModel
 from src.utils.distance import get_distance
+from src.utils.decomposition import decomposition
 
 
 class TsfKNN(MLForecastModel):
@@ -13,23 +14,29 @@ class TsfKNN(MLForecastModel):
         
         self.tau = args.knn_tau
         self.m = args.knn_m
-        self.approx = args.approx
+        self.knn_variant = args.knn_variant
         self.seq_len = args.seq_len
         self.pred_len = args.pred_len
-        if self.approx == 'LSH':
+        if self.knn_variant == 'LSH':
             self.lsh = LSH(args)
+        elif self.knn_variant == 'Decomp':
+            args.knn_variant = None
+            self.decomp_func = args.decomp
+            self.knn_trend = TsfKNN(args)
+            self.knn_season = TsfKNN(args)
+            self.decomposed = False
         super().__init__()
 
     def _fit(self, X: np.ndarray) -> None:
         self.X = X[0, :, :]
-        if self.approx == 'LSH':
+        if self.knn_variant == 'LSH':
             X_s = sliding_window_view(self.X, self.seq_len + self.pred_len)
             self.lsh.index(X_s, self.seq_len)
 
     def _search(self, x, X_s, seq_len, pred_len):
         # x: ndaaray (1, seq_len [, n_features])
         # X_s: ndarray (windows, seq_len+pred_len [, n_features])
-        if self.approx == 'LSH':
+        if self.knn_variant == 'LSH':
             # lsh = LSH(self.args)
             # lsh.index(X_s, seq_len)
             neighbor_fore = self.lsh.query(x, X_s, self.k, self.distance)
@@ -42,6 +49,12 @@ class TsfKNN(MLForecastModel):
             # neighbor_fore = np.concatenate([X[:,seq_len:] for X in neighbor_fore])
             x_fore = np.mean(neighbor_fore, axis=0, keepdims=True)
             return x_fore
+        elif self.knn_variant == 'Decomp':
+            self._get_decomp_result(X_s)
+            x_trend, x_season = decomposition(x, self.decomp_func, 24)
+            x_trend_fore = self.knn_trend._search(x_trend, np.concatenate((self.X_wins_trend, self.Y_wins_trend), axis=1), seq_len, pred_len)
+            x_season_fore = self.knn_season._search(x_season, np.concatenate((self.X_wins_season, self.Y_wins_season), axis=1), seq_len, pred_len)
+            return x_trend_fore + x_season_fore
         else:
             if self.msas == 'MIMO':
                 distances = self.distance(x, X_s[:, :seq_len, :])
@@ -66,8 +79,9 @@ class TsfKNN(MLForecastModel):
         bs, seq_len, channels = X.shape
         X_s = sliding_window_view(self.X, (seq_len + pred_len, channels)).reshape(-1, seq_len + pred_len, channels)
         X_s = np.concatenate((self._lag_embed(X_s[:,:self.seq_len]), X_s[:,self.seq_len:]),axis=1)
+        X = self._lag_embed(X)
         for i in range(X.shape[0]):
-            x = self._lag_embed(X[i:i+1, :, :])
+            x = X[i:i+1, :, :]
             x_fore = self._search(x, X_s, x.shape[1], pred_len)
             fore.append(x_fore)
         fore = np.concatenate(fore, axis=0)
@@ -78,6 +92,13 @@ class TsfKNN(MLForecastModel):
         if self.m > 0:
             idx = idx[:self.m]
         return X[:,idx]
+    
+    def _get_decomp_result(self, X_s):
+        if not self.decomposed:
+            X_wins, Y_wins = X_s[:, :self.seq_len, :], X_s[:, self.seq_len:, :]
+            self.X_wins_trend, self.X_wins_season = decomposition(X_wins, self.decomp_func, 24)
+            self.Y_wins_trend, self.Y_wins_season = decomposition(Y_wins, self.decomp_func, 24)
+            self.decomposed = True
 
 
 class LSH():

@@ -1,4 +1,15 @@
 import numpy as np
+import statsmodels.api as sm
+
+
+def decomposition(x, s, *args):
+    if s == 'moving_average':
+        return moving_average(x, *args)
+    elif s == 'differential_decomposition':
+        return differential_decomposition(x)
+    elif s == 'STL_decomposition':
+        return STL_decomposition(x, *args)
+
 
 def moving_average(X, seasonal_period):
     """
@@ -27,7 +38,7 @@ def moving_average(X, seasonal_period):
     return (X_trend, X_season)
 
 
-def differential_decomposition(x):
+def differential_decomposition(X):
     """
     Differential Decomposition Algorithm
     Args:
@@ -36,6 +47,34 @@ def differential_decomposition(x):
         trend (numpy.ndarray): Trend component
         seasonal (numpy.ndarray): Seasonal component
     """
+    # X: ndarray, (1, time, feature/OT)
+    # X: ndarray, (windows_test, seq_len, features)
+    X_season = X - np.roll(X, 1, axis=1)
+    X_season[0] = 0
+    X_trend = X - X_season
+    return (X_trend, X_season)
 
-    raise NotImplementedError
 
+def STL_decomposition(X, period):
+    """
+    A naive implementation of STL
+    SUPER SLOW due to non-parallel
+    """
+    # X: ndarray, (1, time, feature/OT)
+    # X: ndarray, (windows_test, seq_len, features)
+    X_trend = np.zeros_like(X)
+    for i in range(X.shape[0]):
+        for j in range(X.shape[2]):
+            X_trend[i,:,j] = sm.nonparametric.lowess(X[i,:,j], np.arange(X.shape[1]), return_sorted=False)
+    X_detrend = X - X_trend
+    
+    X_season = np.zeros_like(X)
+    for p in range(period):
+        interval = np.arange(p, X.shape[1], period)
+        X_season[:,interval,:] = np.mean(X_detrend[:,interval,:], axis=2, keepdims=True)
+    
+    X_residual = X_detrend - X_season
+    
+    # We can decompose it into 3 terms
+    # But the model only accepts 2 terms
+    return (X_trend, X_season+X_residual)
