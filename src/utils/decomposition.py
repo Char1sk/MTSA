@@ -55,10 +55,19 @@ def differential_decomposition(X):
     return (X_trend, X_season)
 
 
-def STL_decomposition(X, period):
+def STL_decomposition(X, seasonal_period):
     """
     A naive implementation of STL
     SUPER SLOW due to non-parallel
+    
+    Seasonal and Trend decomposition using Loess
+    Args:
+        x (numpy.ndarray): Input time series data
+        seasonal_period (int): Seasonal period
+    Returns:
+        trend (numpy.ndarray): Trend component
+        seasonal (numpy.ndarray): Seasonal component
+        residual (numpy.ndarray): Residual component
     """
     # X: ndarray, (1, time, feature/OT)
     # X: ndarray, (windows_test, seq_len, features)
@@ -69,8 +78,8 @@ def STL_decomposition(X, period):
     X_detrend = X - X_trend
     
     X_season = np.zeros_like(X)
-    for p in range(period):
-        interval = np.arange(p, X.shape[1], period)
+    for p in range(seasonal_period):
+        interval = np.arange(p, X.shape[1], seasonal_period)
         X_season[:,interval,:] = np.mean(X_detrend[:,interval,:], axis=2, keepdims=True)
     
     X_residual = X_detrend - X_season
@@ -78,3 +87,19 @@ def STL_decomposition(X, period):
     # We can decompose it into 3 terms
     # But the model only accepts 2 terms
     return (X_trend, X_season+X_residual)
+
+
+def X11_decomposition(x, seasonal_period):
+    """
+    X11 decomposition
+    Args:
+        x (numpy.ndarray): Input time series data
+        seasonal_period (int): Seasonal period
+    Returns:
+        trend (numpy.ndarray): Trend component
+        seasonal (numpy.ndarray): Seasonal component
+        residual (numpy.ndarray): Residual component
+    """
+
+    raise NotImplementedError
+

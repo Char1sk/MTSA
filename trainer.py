@@ -14,23 +14,24 @@ class MLTrainer:
         t_X = self.transform.transform(train_X)
         self.model.fit(t_X)
 
-    def evaluate(self, dataset, seq_len=96, pred_len=32):
+    def evaluate(self, dataset, seq_len=96, pred_len=96):
         if dataset.type == 'm4':
             test_X = dataset.train_data
             test_Y = dataset.test_data
             pred_len = dataset.test_data.shape[-1]
         else:
             test_data = dataset.test_data
+            test_data = self.transform.transform(test_data)
             subseries = np.concatenate(([sliding_window_view(v, (seq_len + pred_len, v.shape[-1])) for v in test_data]))
             test_X = subseries[:, 0, :seq_len, :]
             test_Y = subseries[:, 0, seq_len:, :]
-        te_X = self.transform.transform(test_X)
+        te_X = test_X
         fore = self.model.forecast(te_X, pred_len=pred_len)
-        fore = self.transform.inverse_transform(fore)
-        r_mse, r_mae = mse(fore, test_Y), mae(fore, test_Y)
-        print('mse:', r_mse)
-        print('mae:', r_mae)
-        return r_mse, r_mae
+        # fore = self.transform.inverse_transform(fore)
+        mse, mae = mse(fore, test_Y), mae(fore, test_Y)
+        print('mse:', mse)
+        print('mae:', mae)
+        return mse, mae
         # print('mape:', mape(fore, test_Y))
         # print('smape:', smape(fore, test_Y))
         # print('mase:', mase(fore, test_Y))
