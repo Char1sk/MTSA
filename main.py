@@ -70,7 +70,7 @@ def get_args():
     parser.add_argument('--transform', type=str, default='IdentityTransform')
     parser.add_argument('--boxcox_lambda', type=float, default=2.0, help='hyper-parameter lambda in BoxCox')
     # decomp function
-    parser.add_argument('--decomp', type=str, default='moving_average', help='["moving_average", "differential_decomposition", "STL_decomposition"]')
+    parser.add_argument('--decomp', type=str, default='moving_average', help='["moving_average", "differential_decomposition", "STL_decomposition", "X11_decomposition"]')
     # job
     parser.add_argument('--job', type=str, default='main', help='select in ["main", "test", "knn_test", "knn_test_embed_dist", "decomp_test"]')
     

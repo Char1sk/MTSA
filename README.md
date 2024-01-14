@@ -68,9 +68,9 @@ The experimental settings used here are the same as [TimesNet](https://arxiv.org
 If your model is better than SOTA, you can get 15 pts extra.
 
 | Dataset | pred_len | Models | Decomposition | MSE  | MAE  |
- |---------|----------|--------|------------| ----- | ----- |
+|---------|----------|--------|------------| ----- | ----- |
 | ETTh1   | 96       | TsfKNN | MA     |      |      |
- | ...     |          |        |      |      |      |
+| ...     |          |        |      |      |      |
 
  
 
