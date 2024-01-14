@@ -1,5 +1,6 @@
 from src.models.TsfKNN import TsfKNN
 from src.models.DLinear import DLinear
+from src.models.ARIMA import ARIMA
 from src.models.baselines import ZeroForecast, MeanForecast, LinearRegression, ExponantialSmoothing
 from src.utils.transforms import IdentityTransform, NormalizationTransform, StandardizationTransform, MeanNormalizationTransform, BoxCoxTransform
 from trainer import MLTrainer
@@ -17,7 +18,8 @@ def get_model(args):
         'LinearRegression': LinearRegression,
         'ExponantielSmoothing': ExponantialSmoothing,
         'TsfKNN': TsfKNN,
-        'DLinear': DLinear
+        'DLinear': DLinear,
+        'ARIMA': ARIMA
     }
     return model_dict[args.model](args)
 
