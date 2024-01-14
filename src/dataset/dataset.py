@@ -4,9 +4,9 @@ import pandas as pd
 
 class DatasetBase:
     def __init__(self, args):
-        self.ratio_train = args.ratio_train
-        self.ratio_val = args.ratio_val
-        self.ratio_test = args.ratio_test
+        # self.ratio_train = args.ratio_train
+        # self.ratio_val = args.ratio_val
+        # self.ratio_test = args.ratio_test
         self.split = False
         self.read_data()
         self.split_data(args.seq_len)

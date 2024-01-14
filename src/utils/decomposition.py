@@ -1,5 +1,6 @@
 import numpy as np
 import statsmodels.api as sm
+from statsmodels.tsa.seasonal import STL
 
 
 def decomposition(x, s, *args):
@@ -71,22 +72,31 @@ def STL_decomposition(X, seasonal_period):
     """
     # X: ndarray, (1, time, feature/OT)
     # X: ndarray, (windows_test, seq_len, features)
+    
+    # X_trend = np.zeros_like(X)
+    # for i in range(X.shape[0]):
+    #     for j in range(X.shape[2]):
+    #         X_trend[i,:,j] = sm.nonparametric.lowess(X[i,:,j], np.arange(X.shape[1]), return_sorted=False)
+    # X_detrend = X - X_trend
+    
+    # X_season = np.zeros_like(X)
+    # for p in range(seasonal_period):
+    #     interval = np.arange(p, X.shape[1], seasonal_period)
+    #     X_season[:,interval,:] = np.mean(X_detrend[:,interval,:], axis=2, keepdims=True)
+    
+    # X_residual = X_detrend - X_season
+    
     X_trend = np.zeros_like(X)
+    X_season = np.zeros_like(X)
+    X_residual = np.zeros_like(X)
     for i in range(X.shape[0]):
         for j in range(X.shape[2]):
-            X_trend[i,:,j] = sm.nonparametric.lowess(X[i,:,j], np.arange(X.shape[1]), return_sorted=False)
-    X_detrend = X - X_trend
+            result = STL(X[i,:,j], period=seasonal_period, robust=True).fit()
+            X_trend[i,:,j] = np.array(result.trend)
+            X_season[i,:,j] = np.array(result.seasonal)
+            X_residual[i,:,j] = np.array(result.resid)
     
-    X_season = np.zeros_like(X)
-    for p in range(seasonal_period):
-        interval = np.arange(p, X.shape[1], seasonal_period)
-        X_season[:,interval,:] = np.mean(X_detrend[:,interval,:], axis=2, keepdims=True)
-    
-    X_residual = X_detrend - X_season
-    
-    # We can decompose it into 3 terms
-    # But the model only accepts 2 terms
-    return (X_trend, X_season+X_residual)
+    return (X_trend, X_season, X_residual)
 
 
 def X11_decomposition(x, seasonal_period):
@@ -100,6 +110,6 @@ def X11_decomposition(x, seasonal_period):
         seasonal (numpy.ndarray): Seasonal component
         residual (numpy.ndarray): Residual component
     """
-
+    
     raise NotImplementedError
 
