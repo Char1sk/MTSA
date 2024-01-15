@@ -77,7 +77,10 @@ class TsfKNN(MLForecastModel):
         # X: ndarray (windows, seq_len [, n_features])
         fore = []
         bs, seq_len, channels = X.shape
-        X_s = sliding_window_view(self.X, (seq_len + pred_len, channels)).reshape(-1, seq_len + pred_len, channels)
+        if self.Xs_provided is None:
+            X_s = sliding_window_view(self.X, (seq_len + pred_len, channels)).reshape(-1, seq_len + pred_len, channels)
+        else:
+            X_s = self.Xs_provided
         X_s = np.concatenate((self._lag_embed(X_s[:,:self.seq_len]), X_s[:,self.seq_len:]),axis=1)
         X = self._lag_embed(X)
         for i in range(X.shape[0]):
@@ -86,6 +89,10 @@ class TsfKNN(MLForecastModel):
             fore.append(x_fore)
         fore = np.concatenate(fore, axis=0)
         return fore
+    
+    def _set_Xs(self, Xs):
+        self.Xs_provided = Xs
+        self.fitted = True
     
     def _lag_embed(self, X):
         idx = np.arange(0, self.seq_len, self.tau)

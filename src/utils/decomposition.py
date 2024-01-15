@@ -146,3 +146,28 @@ def X11_decomposition(X, seasonal_period):
     
     return (T3, S2, I)
 
+
+if __name__ == '__main__':
+    from main import get_args, get_dataset, get_transform
+    from numpy.lib.stride_tricks import sliding_window_view
+    
+    args = get_args()
+    dataset = get_dataset(args)
+    transform = get_transform(args)
+    
+    X = dataset.train_data
+    wins = np.concatenate((
+        [sliding_window_view(v, (args.seq_len+args.pred_len, X.shape[2])).squeeze(1) for v in X[:,:,:]]
+    ))
+    X_wins, Y_wins = wins[:, :args.seq_len, :], wins[:, args.seq_len:, :]
+    # Have to get [:2] for (trend, season) and (trend, season, residual)
+    X_wins_trend, X_wins_season = decomposition(X_wins, args.decomp_func, 24)[:2]
+    Y_wins_trend, Y_wins_season = decomposition(Y_wins, args.decomp_func, 24)[:2]
+    # X_wins_trend, X_wins_season, X_wins_residual = decomposition(X_wins, args.decomp_func, 24)
+    # Y_wins_trend, Y_wins_season, Y_wins_residual = decomposition(Y_wins, args.decomp_func, 24)
+    # args.model_trend._set_Xs(np.concatenate((X_wins_trend, Y_wins_trend), axis=1))
+    # args.model_trend.fit(np.concatenate((X_wins_trend, Y_wins_trend), axis=1))
+    args.model_trend.slided_fit(np.concatenate((X_wins_trend, Y_wins_trend), axis=1))
+    args.model_season.slided_fit(np.concatenate((X_wins_season, Y_wins_season), axis=1))
+    # args.model_residual.fit(np.concatenate((X_wins_residual, Y_wins_residual), axis=1))
+    # args.model_residual.slided_fit(np.concatenate((X_wins_residual, Y_wins_residual), axis=1))

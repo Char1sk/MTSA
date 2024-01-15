@@ -2,6 +2,7 @@ from src.models.TsfKNN import TsfKNN
 from src.models.DLinear import DLinear
 from src.models.ARIMA import ARIMA
 from src.models.ThetaMethod import ThetaMethod
+from src.models.ResidualModel import ResidualModel
 from src.models.baselines import ZeroForecast, MeanForecast, LinearRegression, ExponantialSmoothing
 from src.utils.transforms import IdentityTransform, NormalizationTransform, StandardizationTransform, MeanNormalizationTransform, BoxCoxTransform
 from trainer import MLTrainer
@@ -21,7 +22,8 @@ def get_model(args):
         'TsfKNN': TsfKNN,
         'DLinear': DLinear,
         'ARIMA': ARIMA,
-        'ThetaMethod': ThetaMethod
+        'ThetaMethod': ThetaMethod,
+        'ResidualModel': ResidualModel
     }
     return model_dict[args.model](args)
 
@@ -77,16 +79,21 @@ def get_args():
     parser.add_argument('--decomp', type=str, default='moving_average', help='["moving_average", "differential_decomposition", "STL_decomposition", "X11_decomposition"]')
     # job
     parser.add_argument('--job', type=str, default='main', help='select in ["main", "test", "knn_test", "knn_test_embed_dist", "decomp_test"]')
+    # ResidualModel
+    parser.add_argument('--residual', action='store_true', help='use residual for decomposition in ResidualModel')
+    parser.add_argument('--residual_mode', type=str, default='season_first', help='[trend_first|season_first]')
+    parser.add_argument('--model_t', type=str, default='LinearRegression', help='model for Trend')
+    parser.add_argument('--model_s', type=str, default='LinearRegression', help='model for Season')
+    parser.add_argument('--model_r', type=str, default='LinearRegression', help='model for Residual')
     
     args = parser.parse_args()
     return args
 
 
-def set_args(args, dataset, datapath, transform, model):
-    args.dataset = dataset
+def set_args(args, datapath, model, pred_len):
     args.data_path = datapath
-    args.transform = transform
     args.model = model
+    args.pred_len = pred_len
 
 
 def main(args):
@@ -114,42 +121,34 @@ def test(args):
     random.seed(fix_seed)
     np.random.seed(fix_seed)
     
-    datasets = ['M4', 'ETT', 'Custom']
     datapaths = {
-        'electricity': './dataset/electricity/electricity.csv',
-        'exchange_rate': './dataset/exchange_rate/exchange_rate.csv',
-        'illness': './dataset/illness/national_illness.csv',
-        'traffic': './dataset/traffic/traffic.csv',
-        'weather': './dataset/weather/weather.csv'
+        'ETTh1': './dataset/ETT-small/ETTh1.csv',
+        'ETTh2': './dataset/ETT-small/ETTh2.csv',
+        'ETTm1': './dataset/ETT-small/ETTm1.csv',
+        'ETTm2': './dataset/ETT-small/ETTm2.csv',
     }
-    models = ['ZeroForecast','MeanForecast','LinearRegression','ExponantielSmoothing', 'TsfKNN']
-    transforms = [
-        'IdentityTransform',
-        'NormalizationTransform',
-        'StandardizationTransform',
-        'MeanNormalizationTransform',
-        'BoxCoxTransform'
-    ]
+    models = ['ResidualModel']
+    pred_lens = [96, 192, 336, 720]
     
-    with open('./results.csv', 'w') as f:
-        for ds in datasets:
-            if ds != 'Custom':
-                continue
-            for dp in datapaths.keys():
-                for md in models:
-                    for tf in transforms:
-                        random.seed(fix_seed)
-                        np.random.seed(fix_seed)
-                        print(dp,md,tf)
-                        set_args(args, ds, datapaths[dp], tf, md)
-                        dataset = get_dataset(args)
-                        model = get_model(args)
-                        transform = get_transform(args)
-                        trainer = MLTrainer(model=model, transform=transform, dataset=dataset)
-                        trainer.train()
-                        results = trainer.evaluate(dataset, seq_len=args.seq_len, pred_len=args.pred_len)
-                        line = [dp, md, tf] + [str(r) for r in results]
-                        f.write(','.join(line)+'\n')
+    
+    with open('./results.csv', 'a') as f:
+        f.write('datapaths, models, pred_lens, mse, mae\n')
+        for dp in datapaths.keys():
+            for md in models:
+                for pl in pred_lens:
+                    random.seed(fix_seed)
+                    np.random.seed(fix_seed)
+                    
+                    print(dp,md,pl)
+                    set_args(args, datapaths[dp], md, pl)
+                    dataset = get_dataset(args)
+                    model = get_model(args)
+                    transform = get_transform(args)
+                    trainer = MLTrainer(model=model, transform=transform, dataset=dataset)
+                    trainer.train()
+                    results = trainer.evaluate(dataset, seq_len=args.seq_len, pred_len=args.pred_len)
+                    line = [dp, md, str(pl)] + [f'{r:.4}' for r in results]
+                    f.write(','.join(line)+'\n')
 
 
 def knn_test(args):

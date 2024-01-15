@@ -109,11 +109,11 @@ class ExponantialSmoothing(MLForecastModel):
         pass
     
     def _forecast(self, X: np.ndarray, pred_len) -> np.ndarray:
-        # X: ndarray, (windows_test, OT*seq_len)
-        pred = X[:,:1]
+        # X: ndarray, (windows_test, seq_len, features)
+        pred = X[:,:1,:]
         for c in range(1, X.shape[1]+1):
-            pred = (1-self.lamda)*X[:,c-1:c] + self.lamda*pred
-        return np.tile(pred, (1, pred_len))
+            pred = (1-self.lamda)*X[:,c-1:c,:] + self.lamda*pred
+        return np.tile(pred, (1, pred_len, 1))
 
 
 if __name__ == '__main__':
