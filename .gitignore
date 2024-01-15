@@ -6,4 +6,5 @@ pics
 *.pdf
 *.txt
 *.csv
+*.ipynb
 .vscode
