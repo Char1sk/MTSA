@@ -85,6 +85,10 @@ def get_args():
     parser.add_argument('--model_t', type=str, default='LinearRegression', help='model for Trend')
     parser.add_argument('--model_s', type=str, default='LinearRegression', help='model for Season')
     parser.add_argument('--model_r', type=str, default='LinearRegression', help='model for Residual')
+    # GlobalDataset
+    parser.add_argument('--global', action='store_true', help='use Global Dataset for Model')
+    parser.add_argument('--global_data_paths', type=list, default=["./dataset/ETT-small/ETTh1.csv", "./dataset/ETT-small/ETTh2.csv", "./dataset/ETT-small/ETTm1.csv", "./dataset/ETT-small/ETTm2.csv"], help='datasets')
+    
     
     args = parser.parse_args()
     return args

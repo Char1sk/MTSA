@@ -8,40 +8,57 @@
 
 **STL分解**：即Seasonal-trend decomposition using LOWESS，该方法使用LOWESS做局部加权回归，使序列平滑化，获得趋势项。在获得趋势项后，对去趋势项以季节周期为步长取平均值，将该平均值作为对应位置的季节项。然后再对此进行多次迭代，获得最终的分解结果。该种分解已在上次作业中实现过，此处不再赘述。
 
-**实现细节**：本次实现对上次的实现方式做了更改。上次实现使用statsmodels库的lowess函数来做局部加权回归作为趋势项，再手动计算季节项和剩余项，并且没有进行迭代。本次实现直接使用statsmodels的STL方法。由于lowess仅能处理1d的向量，因此无法高效的并行化，对上万数据量的数据集来说已经非常慢了。实现中没有再进行迭代，也没有对季节性项再进行平滑等处理。
+**实现细节**：本次实现对上次的实现方式做了更改。上次实现使用statsmodels库的lowess函数来做局部加权回归作为趋势项，再手动计算季节项和剩余项，并且没有进行迭代。本次实现直接使用statsmodels的STL方法。同样由于STL仅能处理1d的向量，因此实际分解时需要对所有的sample、所有的channel分别进行STL分解，效率相当低。
 
 ```python
 X_trend = np.zeros_like(X)
+X_season = np.zeros_like(X)
+X_residual = np.zeros_like(X)
 for i in range(X.shape[0]):
     for j in range(X.shape[2]):
-        X_trend[i,:,j] = sm.nonparametric.lowess(X[i,:,j], np.arange(X.shape[1]), return_sorted=False)
-X_detrend = X - X_trend
-    
-X_season = np.zeros_like(X)
-for p in range(period):
-    interval = np.arange(p, X.shape[1], period)
-    X_season[:,interval,:] = np.mean(X_detrend[:,interval,:], axis=2, keepdims=True)
-    
-X_residual = X_detrend - X_season
+        result = STL(X[i,:,j], period=seasonal_period, robust=True).fit()
+        X_trend[i,:,j] = np.array(result.trend)
+        X_season[i,:,j] = np.array(result.seasonal)
+        X_residual[i,:,j] = np.array(result.resid)
+
+return (X_trend, X_season, X_residual)
 ```
 
 ### 1.2 X11 Decomposition
 
-**滑动平均方法**：即对每个时刻取一个滑动窗口，并计算该窗口内的平均值作为该时刻的趋势项。窗口长度为季节周期(此处为24h)。该滑动平均事实上是一个低通滤波器，消除了按周期变化的高频季节项，留下的即低频的趋势项。获取趋势项后，与原序列作差即可得到季节项。
+**X11分解**：X11分解流程主要参考PPT讲义及[链接]([X-11 (jdemetradocumentation.github.io)](https://jdemetradocumentation.github.io/JDemetra-documentation/pages/theory/SA_X11.html))。该方法首先使用复合移动平均得到趋势项$T^1$，然后从原序列中剔除趋势项得到$deT^1$，由之计算得到季节项$S^1$，再从原序列剔除季节项得到$deS^1$，对之使用Henderson移动平均重新得到趋势项$T^2$（此处PPT中书写错误，$Y^2$和$X^2$书写混乱）。之后，重新使用该流程得到$deT^2,S^2,deS^2,T^3$，最后从去季节项中去除趋势项，得到剩余项$R$。（对于PPT中的乘性分解，去除指除法；对于实现中的加性分解，去除指减去）
 
-**实现细节**：此处的实现方法和DLinear文章中的实现方法基本一致，即使当前位置成为窗口的中心，两侧均取L/2长度、总计L长度的窗口；在窗口长度为偶数时，不仿照文章对其补齐为奇数(25)。对于边界处的元素，在窗口内求平均时超出范围的值用边缘值填充。由于该方法在序列较短时，需要进行填充才能进行计算的元素较多，因此受Part3中方式的影响稍大。
+![image-20240115153121381](Report_HW3.assets/image-20240115153121381.png)
+
+需要注意的是，本次实现的X11分解为加性分解，从而和之前所实现的其他分解方法形成对照。此外，两个参考中均含有一些Magic Number，包括$M_{2\times 12}$移动平均、$Henderson_{13}$移动平均等，针对的是周期等于12(即月度数据)的情况。在本次实验中主要使用ETT数据集，其中周期等于24(即以小时为单位)，因此此处改为使用$M_{2\times 24}$移动平均、$Henderson_{23}$移动平均等。针对一些常用的$M_{3\times 3}$等，此处不做更改。
+
+**实现细节**：针对$M_{2\times12}$这样的复合移动平均的实现方式，如同定义一样先后使用了两个移动平均$M_{12}$和$M_2$，此处借用此前实现的滑动平均分解函数。实现Henderson移动平均时，直接使用了其宽度为23的kernel，并使用scipy库的卷积函数实现加权的移动平均；由于卷积在边界会遇到值缺失问题，此处直接使用等效0填充。由于X11分解是支持并行化的，因此运行速度上比STL快很多，但比移动平均分解稍慢。
 
 ```python
-PERIOD = seasonal_period
-LSHIFT = PERIOD//2
-RSHIFT = PERIOD-LSHIFT
-X_pad = np.pad(X, ((0,0),(LSHIFT,RSHIFT),(0,0)), mode='edge')
-times = np.arange(X.shape[1]).reshape(-1, 1)
-interval = np.arange(PERIOD).reshape(1, -1)
-indexes = times + interval
-X_trend = X_pad[:,indexes,:].mean(axis=2)
-X_season = X - X_trend
-return (X_trend, X_season)
+# Step 01: Trend T1
+T1 = moving_average(moving_average(X, seasonal_period)[0], 2)[0]
+# Step 02: DeTrend DT1 (S,I)
+DT1 = X - T1
+# Step 03: Season S1
+S1 = moving_average(moving_average(DT1, 3)[0], 3)[0] - moving_average(moving_average(DT1, seasonal_period)[0], 2)[0]
+# Step 04: DeSeason DS1 (T,I)
+DS1 = X - S1
+# Step 05: Trend T2
+Hw23 = np.array((-0.004, -0.011, -0.016, -0.015, -0.005, 0.013, 0.039, 0.068, 0.097, 0.122, 0.138, 0.148, 0.138, 0.122, 0.097, 0.068, 0.039, 0.013, -0.005, -0.015, -0.016, -0.011, -0.004))
+Hw23 = np.expand_dims(np.expand_dims(Hw23, 0), 2)
+T2 = sp.signal.convolve(DS1, np.flip(Hw23), 'same')
+# Step 06: DeTrend DT2
+DT2 = X - T2
+# Step 07: Season S2
+S2 = moving_average(moving_average(DT2, 3)[0], 3)[0] - moving_average(moving_average(DT2, seasonal_period)[0], 2)[0]
+# Step 08: DeSeason DS2 (T,I)
+DS2 = X - S2
+# Step 09: Trend T3
+T3 = sp.signal.convolve(DS2, np.flip(Hw23), 'same')
+# Step 10: I
+I = DS2 - T3
+    
+return (T3, S2, I)
 ```
 
 ## Part 2. Model
@@ -153,6 +170,8 @@ return X[:,idx]
 
 
 
-
+- LLM比LLL弱一点
+- Residual比nResidual好一点点但不显著
+- Individual在m1尤其好，m2好一点，但都在变长时落后；在h1h2会变弱；而且非常慢
 
 

@@ -1,5 +1,7 @@
 import numpy as np
 import pandas as pd
+import copy
+from numpy.lib.stride_tricks import sliding_window_view
 
 
 class DatasetBase:
@@ -16,6 +18,43 @@ class DatasetBase:
 
     def split_data(self, seq_len):
         pass
+
+
+class GlobalDataset(DatasetBase):
+    def __init__(self, args) -> None:
+        self.datasets = []
+        for path in args.global_data_paths:
+            args_copy = copy.deepcopy(args)
+            args_copy.dataset = 'ETT'
+            args_copy.data_path = path
+            self.datasets.append(get_dataset(args_copy))
+        
+        self.seq_len = args.seq_len
+        self.pred_len = args.pred_len
+        self.type = 'Global'
+    
+    def read_data(self):
+        pass
+    
+    def split_data(self, seq_len):
+        pass
+    
+    def transform_and_slide(self, transform):
+        self.train_data = [transform.transform(d.train_data) for d in self.datasets]
+        self.val_data   = [transform.transform(d.val_data  ) for d in self.datasets]
+        self.test_data  = [transform.transform(d.test_data ) for d in self.datasets]
+        self.train_data_wins = np.concatenate([np.concatenate((
+                                                [sliding_window_view(v, (self.seq_len+self.pred_len, d.shape[2])).squeeze(1)
+                                                for v in d]))
+                                              for d in self.train_data], axis=0)
+        self.val_data_wins   = np.concatenate([np.concatenate((
+                                                [sliding_window_view(v, (self.seq_len+self.pred_len, d.shape[2])).squeeze(1)
+                                                for v in d]))
+                                              for d in self.val_data  ], axis=0)
+        self.test_data_wins  = np.concatenate([np.concatenate((
+                                                [sliding_window_view(v, (self.seq_len+self.pred_len, d.shape[2])).squeeze(1)
+                                                for v in d]))
+                                              for d in self.test_data ], axis=0)
 
 
 class M4Dataset(DatasetBase):
@@ -144,6 +183,7 @@ def get_dataset(args):
         'M4': M4Dataset,
         'ETT': ETTDataset,
         'Custom': CustomDataset,
+        'Global': GlobalDataset,
     }
     return dataset_dict[args.dataset](args)
 

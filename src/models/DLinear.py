@@ -23,6 +23,7 @@ class DLinear(MLForecastModel):
         # X_trend, X_season = decomposition(X, self.decomp_func, 24)
         # self.model_trend.fit(X_trend)
         # self.model_season.fit(X_season)
+        
         # NOTE: Ver.2: Slide -> decomp -> fit
         # wins = np.concatenate((
         #     [sliding_window_view(v, (self.seq_len+self.pred_len, X.shape[2])).squeeze(1) for v in X[:,:,:]]
@@ -30,16 +31,19 @@ class DLinear(MLForecastModel):
         # wins_trend, wins_season = decomposition(wins, self.decomp_func, 24)
         # self.model_trend.slided_fit(wins_trend)
         # self.model_season.slided_fit(wins_season)
+        
         # NOTE: Ver.3: Slide -> SPLIT -> decompXY -> fit12
         wins = np.concatenate((
             [sliding_window_view(v, (self.seq_len+self.pred_len, X.shape[2])).squeeze(1) for v in X[:,:,:]]
         ))
-        X_wins, Y_wins = wins[:, :self.seq_len, :], wins[:, self.seq_len:, :]
-        # Have to get [:2] for (trend, season) and (trend, season, residual)
-        X_wins_trend, X_wins_season = decomposition(X_wins, self.decomp_func, 24)[:2]
-        Y_wins_trend, Y_wins_season = decomposition(Y_wins, self.decomp_func, 24)[:2]
-        self.model_trend.slided_fit(np.concatenate((X_wins_trend, Y_wins_trend), axis=1))
-        self.model_season.slided_fit(np.concatenate((X_wins_season, Y_wins_season), axis=1))
+        self.slided_fit(wins)
+        # X_wins, Y_wins = wins[:, :self.seq_len, :], wins[:, self.seq_len:, :]
+        # # Have to get [:2] for (trend, season) and (trend, season, residual)
+        # X_wins_trend, X_wins_season = decomposition(X_wins, self.decomp_func, 24)[:2]
+        # Y_wins_trend, Y_wins_season = decomposition(Y_wins, self.decomp_func, 24)[:2]
+        # self.model_trend.slided_fit(np.concatenate((X_wins_trend, Y_wins_trend), axis=1))
+        # self.model_season.slided_fit(np.concatenate((X_wins_season, Y_wins_season), axis=1))
+        
         # NOTE: Ver.4: Slide -> SPLIT -> decompX -> fit1 -> fit2
         # wins = np.concatenate((
         #     [sliding_window_view(v, (self.seq_len+self.pred_len, X.shape[2])).squeeze(1) for v in X[:,:,:]]
@@ -49,7 +53,16 @@ class DLinear(MLForecastModel):
         # self.model_trend.slided_fit(np.concatenate((X_wins_trend, Y_wins), axis=1))
         # Y_wins_trend_pred = self.model_trend.forecast(X_wins_trend, self.pred_len)
         # self.model_season.slided_fit(np.concatenate((X_wins_season, Y_wins-Y_wins_trend_pred), axis=1))
-        
+    
+    def slided_fit(self, wins: np.ndarray) -> None:
+        # NOTE: Ver.3: Slide -> SPLIT -> decompXY -> fit12
+        X_wins, Y_wins = wins[:, :self.seq_len, :], wins[:, self.seq_len:, :]
+        # Have to get [:2] for (trend, season) and (trend, season, residual)
+        X_wins_trend, X_wins_season = decomposition(X_wins, self.decomp_func, 24)[:2]
+        Y_wins_trend, Y_wins_season = decomposition(Y_wins, self.decomp_func, 24)[:2]
+        self.model_trend.slided_fit(np.concatenate((X_wins_trend, Y_wins_trend), axis=1))
+        self.model_season.slided_fit(np.concatenate((X_wins_season, Y_wins_season), axis=1))
+        self.fitted = True
     
     def _forecast(self, X: np.ndarray, pred_len) -> np.ndarray:
         # X: ndarray, (windows_test, seq_len, features)

@@ -10,30 +10,49 @@ class MLTrainer:
         self.dataset = dataset
 
     def train(self):
-        train_X = self.dataset.train_data
-        t_X = self.transform.transform(train_X)
-        self.model.fit(t_X)
+        if self.dataset.type == 'Global':
+            self.dataset.transform_and_slide(self.transform)
+            train_X_wins = self.dataset.train_data_wins
+            self.model.slided_fit(train_X_wins)
+        else:
+            train_X = self.dataset.train_data
+            t_X = self.transform.transform(train_X)
+            self.model.fit(t_X)
 
     def evaluate(self, dataset, seq_len=96, pred_len=96):
-        if dataset.type == 'm4':
-            test_X = dataset.train_data
-            test_Y = dataset.test_data
-            pred_len = dataset.test_data.shape[-1]
+        if dataset.type == 'Global':
+            results = []
+            for test_data in dataset.test_data:
+                test_data = self.transform.transform(test_data)
+                subseries = np.concatenate(([sliding_window_view(v, (seq_len + pred_len, v.shape[-1])) for v in test_data]))
+                test_X = subseries[:, 0, :seq_len, :]
+                test_Y = subseries[:, 0, seq_len:, :]
+                te_X = test_X
+                fore = self.model.forecast(te_X, pred_len=pred_len)
+                # fore = self.transform.inverse_transform(fore)
+                mse_result, mae_result = mse(fore, test_Y), mae(fore, test_Y)
+                results.append((mse_result, mae_result))
+                print('mse:', mse_result)
+                print('mae:', mae_result)
+            return results
         else:
-            test_data = dataset.test_data
-            test_data = self.transform.transform(test_data)
-            test_data = self.transform.transform(test_data)
-            subseries = np.concatenate(([sliding_window_view(v, (seq_len + pred_len, v.shape[-1])) for v in test_data]))
-            test_X = subseries[:, 0, :seq_len, :]
-            test_Y = subseries[:, 0, seq_len:, :]
-        te_X = test_X
-        te_X = test_X
-        fore = self.model.forecast(te_X, pred_len=pred_len)
-        # fore = self.transform.inverse_transform(fore)
-        mse_result, mae_result = mse(fore, test_Y), mae(fore, test_Y)
-        print('mse:', mse_result)
-        print('mae:', mae_result)
-        return mse_result, mae_result
-        # print('mape:', mape(fore, test_Y))
-        # print('smape:', smape(fore, test_Y))
-        # print('mase:', mase(fore, test_Y))
+            if dataset.type == 'm4':
+                test_X = dataset.train_data
+                test_Y = dataset.test_data
+                pred_len = dataset.test_data.shape[-1]
+            else:
+                test_data = dataset.test_data
+                test_data = self.transform.transform(test_data)
+                subseries = np.concatenate(([sliding_window_view(v, (seq_len + pred_len, v.shape[-1])) for v in test_data]))
+                test_X = subseries[:, 0, :seq_len, :]
+                test_Y = subseries[:, 0, seq_len:, :]
+            te_X = test_X
+            fore = self.model.forecast(te_X, pred_len=pred_len)
+            # fore = self.transform.inverse_transform(fore)
+            mse_result, mae_result = mse(fore, test_Y), mae(fore, test_Y)
+            print('mse:', mse_result)
+            print('mae:', mae_result)
+            return mse_result, mae_result
+            # print('mape:', mape(fore, test_Y))
+            # print('smape:', smape(fore, test_Y))
+            # print('mase:', mase(fore, test_Y))

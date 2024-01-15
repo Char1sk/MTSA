@@ -17,6 +17,7 @@ class TsfKNN(MLForecastModel):
         self.knn_variant = args.knn_variant
         self.seq_len = args.seq_len
         self.pred_len = args.pred_len
+        self.Xs_provided = None
         if self.knn_variant == 'LSH':
             self.lsh = LSH(args)
         elif self.knn_variant == 'Decomp':
@@ -32,6 +33,10 @@ class TsfKNN(MLForecastModel):
         if self.knn_variant == 'LSH':
             X_s = sliding_window_view(self.X, self.seq_len + self.pred_len)
             self.lsh.index(X_s, self.seq_len)
+
+    def slided_fit(self, wins: np.ndarray):
+        self.Xs_provided = wins
+        self.fitted = True
 
     def _search(self, x, X_s, seq_len, pred_len):
         # x: ndaaray (1, seq_len [, n_features])
