@@ -3,6 +3,7 @@ from src.models.DLinear import DLinear
 from src.models.ARIMA import ARIMA
 from src.models.ThetaMethod import ThetaMethod
 from src.models.ResidualModel import ResidualModel
+from src.models.SPIRIT import SPIRIT
 from src.models.baselines import ZeroForecast, MeanForecast, LinearRegression, ExponantialSmoothing
 from src.utils.transforms import IdentityTransform, NormalizationTransform, StandardizationTransform, MeanNormalizationTransform, BoxCoxTransform
 from trainer import MLTrainer
@@ -23,7 +24,8 @@ def get_model(args):
         'DLinear': DLinear,
         'ARIMA': ARIMA,
         'ThetaMethod': ThetaMethod,
-        'ResidualModel': ResidualModel
+        'ResidualModel': ResidualModel,
+        'SPIRIT': SPIRIT
     }
     return model_dict[args.model](args)
 
@@ -88,6 +90,8 @@ def get_args():
     # GlobalDataset
     parser.add_argument('--global', action='store_true', help='use Global Dataset for Model')
     parser.add_argument('--global_data_paths', type=list, default=["./dataset/ETT-small/ETTh1.csv", "./dataset/ETT-small/ETTh2.csv", "./dataset/ETT-small/ETTm1.csv", "./dataset/ETT-small/ETTm2.csv"], help='datasets')
+    # SPIRIT
+    parser.add_argument('--n_components', type=int, default=5, help='number of features kept in PCA of SPIRIT')
     
     
     args = parser.parse_args()
